@@ -13,11 +13,20 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     vim \
     wget \
+    tmux \
+    openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install tmate
+# Install tmate and its dependencies
 RUN apt-get update && apt-get install -y \
     tmate \
+    automake \
+    pkg-config \
+    libtool \
+    libevent-dev \
+    libncurses-dev \
+    libssl-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure SSH
@@ -36,13 +45,19 @@ RUN echo 'ubuntu:ubuntu' | chpasswd
 RUN mkdir -p /home/ubuntu/.config/tmate
 RUN chown -R ubuntu:root /home/ubuntu/.config
 
+# Generate SSH keys for tmate
+RUN mkdir -p /home/ubuntu/.ssh
+RUN ssh-keygen -t rsa -f /home/ubuntu/.ssh/id_rsa -N ""
+RUN chown -R ubuntu:root /home/ubuntu/.ssh
+
 WORKDIR /home/ubuntu
 
-# Copy tmate setup script
+# Copy tmate setup script and entrypoint
 COPY setup-tmate.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/setup-tmate.sh
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/setup-tmate.sh /usr/local/bin/entrypoint.sh
 
 EXPOSE 22
 
-# Start SSH service and keep container running
-CMD ["/usr/sbin/sshd", "-D"] 
+# Use entrypoint script to start both SSH and tmate
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"] 
